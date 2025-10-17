@@ -1,23 +1,30 @@
 
 import 'package:flutter/material.dart';
-import 'package:gestionsocios/pages/pagina_registro.dart';
 import 'package:gestionsocios/services/auth_service.dart';
 
-class PaginaLogin extends StatefulWidget {
-  const PaginaLogin({super.key});
+class PaginaRegistro extends StatefulWidget {
+  const PaginaRegistro({super.key});
 
   @override
-  State<PaginaLogin> createState() => _PaginaLoginState();
+  State<PaginaRegistro> createState() => _PaginaRegistroState();
 }
 
-class _PaginaLoginState extends State<PaginaLogin> {
+class _PaginaRegistroState extends State<PaginaRegistro> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
 
-  void _login() async {
+  void _register() async {
     if (_isLoading) return;
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Las contraseñas no coinciden')),
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -26,7 +33,7 @@ class _PaginaLoginState extends State<PaginaLogin> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    final userCredential = await _authService.signInWithEmailAndPassword(email, password);
+    final userCredential = await _authService.createUserWithEmailAndPassword(email, password);
 
     if (!mounted) return;
 
@@ -34,12 +41,15 @@ class _PaginaLoginState extends State<PaginaLogin> {
       _isLoading = false;
     });
 
-    if (userCredential == null) {
+    if (userCredential != null) {
+      // Si el registro es exitoso, vuelve a la página anterior (AuthWrapper se encargará de redirigir)
+      Navigator.of(context).pop();
+    } else {
+      // Muestra un error genérico. Se puede mejorar para ser más específico.
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email o contraseña incorrectos')),
+        const SnackBar(content: Text('Error al registrar. El email podría ya estar en uso o la contraseña es muy débil.')),
       );
     }
-    // La navegación es manejada por AuthWrapper
   }
 
   @override
@@ -48,11 +58,11 @@ class _PaginaLoginState extends State<PaginaLogin> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          'Club',
+          'Registro de Socio',
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.blue[800],
-        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SafeArea(
         child: Center(
@@ -63,7 +73,7 @@ class _PaginaLoginState extends State<PaginaLogin> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Icon(
-                  Icons.shield,
+                  Icons.person_add_alt_1,
                   size: 100,
                   color: Colors.blue[800],
                 ),
@@ -91,9 +101,21 @@ class _PaginaLoginState extends State<PaginaLogin> {
                   ),
                   obscureText: true,
                 ),
+                const SizedBox(height: 16.0),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  decoration: InputDecoration(
+                    labelText: 'Confirmar Contraseña',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: Icon(Icons.lock_outline, color: Colors.blue[800]),
+                  ),
+                  obscureText: true,
+                ),
                 const SizedBox(height: 24.0),
                 ElevatedButton(
-                  onPressed: _login,
+                  onPressed: _register,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue[800],
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -104,21 +126,9 @@ class _PaginaLoginState extends State<PaginaLogin> {
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
-                          'Ingresar',
+                          'Registrarse',
                           style: TextStyle(fontSize: 18, color: Colors.white),
                         ),
-                ),
-                const SizedBox(height: 16.0),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const PaginaRegistro()),
-                    );
-                  },
-                  child: Text(
-                    '¿No tienes cuenta? Regístrate',
-                    style: TextStyle(color: Colors.blue[800]),
-                  ),
                 ),
               ],
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gestionsocios/pages/lista_eventos_page.dart';
 import 'package:gestionsocios/pages/lista_socios_page.dart';
+import 'package:gestionsocios/services/auth_service.dart';
 
 class PaginaPanelAdmin extends StatelessWidget {
   const PaginaPanelAdmin({super.key});
@@ -11,6 +12,14 @@ class PaginaPanelAdmin extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Panel de Administrador', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue[800],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () {
+              AuthService().signOut();
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

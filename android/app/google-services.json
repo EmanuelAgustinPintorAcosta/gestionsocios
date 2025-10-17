@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "735552269809",
+    "project_id": "gestionsocios-pintor",
+    "storage_bucket": "gestionsocios-pintor.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:735552269809:android:66e392d03994947f6ca850",
+        "android_client_info": {
+          "package_name": "com.example.gestionsocios"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDRgOn7LmXL4W8tpVuauwewyW4DVebeozM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
