@@ -1,8 +1,9 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:gestionsocios/services/firestore_service.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Added
+import 'package:gestionsocios/services/auth_service.dart'; // Added
 
 class ListaEventosPage extends StatefulWidget {
   const ListaEventosPage({super.key});
@@ -13,23 +14,172 @@ class ListaEventosPage extends StatefulWidget {
 
 class _ListaEventosPageState extends State<ListaEventosPage> {
   final FirestoreService _firestoreService = FirestoreService();
+  String? _userRole;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserRole();
+  }
+
+  Future<void> _loadUserRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final role = await AuthService().getUserRole(user.uid);
+      setState(() {
+        _userRole = role;
+      });
+    }
+  }
+
+  void _showEventFormDialog({DocumentSnapshot? evento}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final _formKey = GlobalKey<FormState>();
+        final _nameController = TextEditingController();
+        DateTime? _selectedDate;
+
+        bool isEditing = evento != null;
+        Map<String, dynamic>? initialData;
+        if (isEditing) {
+          initialData = evento!.data() as Map<String, dynamic>?;
+          if (initialData == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Error: Datos del evento no encontrados para editar.')),
+            );
+            Navigator.of(context).pop();
+            return const SizedBox.shrink();
+          }
+          _nameController.text = initialData['name'] ?? '';
+          final dateValue = initialData['date'];
+          _selectedDate = dateValue is Timestamp ? dateValue.toDate() : null;
+        }
+
+        return AlertDialog(
+          title: Text(isEditing ? 'Editar Evento' : 'Agregar Evento'),
+          content: Form(
+            key: _formKey,
+            child: StatefulBuilder(
+              builder: (BuildContext context, StateSetter dialogSetState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(labelText: 'Nombre del Evento'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingrese un nombre para el evento';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      title: Text(
+                        _selectedDate == null
+                            ? 'Seleccionar Fecha'
+                            : 'Fecha: ${DateFormat('dd/MM/yyyy').format(_selectedDate!)}',
+                      ),
+                      trailing: const Icon(Icons.calendar_today),
+                      onTap: () async {
+                        final DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: _selectedDate ?? DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2101),
+                        );
+                        if (picked != null && picked != _selectedDate) {
+                          dialogSetState(() {
+                            _selectedDate = picked;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (_formKey.currentState!.validate()) {
+                  if (_selectedDate == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Por favor seleccione una fecha para el evento.')),
+                    );
+                    return;
+                  }
+
+                  final eventData = {
+                    'name': _nameController.text.trim(),
+                    'date': _selectedDate,
+                  };
+
+                  try {
+                    if (isEditing) {
+                      await _firestoreService.updateEvento(evento!.id, eventData);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Evento ${_nameController.text} actualizado con éxito.')),
+                      );
+                    } else {
+                      await _firestoreService.addEvento(eventData);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Evento ${_nameController.text} agregado con éxito.')),
+                      );
+                    }
+                    Navigator.of(context).pop();
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error al guardar evento: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _agregarEvento() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Funcionalidad para agregar evento no implementada.')),
-    );
+    _showEventFormDialog();
   }
 
   void _editarEvento(DocumentSnapshot evento) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Funcionalidad para editar \'${(evento.data() as Map<String, dynamic>)['name']}\' no implementada.')),
-    );
+    _showEventFormDialog(evento: evento);
   }
 
-  void _eliminarEvento(DocumentSnapshot evento) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Funcionalidad para eliminar \'${(evento.data() as Map<String, dynamic>)['name']}\' no implementada.')),
-    );
+  void _eliminarEvento(DocumentSnapshot evento) async {
+    final data = evento.data() as Map<String, dynamic>?;
+    if (data == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: Datos del evento no encontrados para eliminar.')),
+      );
+      return;
+    }
+    final eventName = data['name'] ?? 'Evento desconocido';
+
+    try {
+      await _firestoreService.deleteEvento(evento.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Evento $eventName eliminado con éxito.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al eliminar evento: $e')),
+      );
+    }
   }
 
   @override
@@ -99,7 +249,7 @@ class _ListaEventosPageState extends State<ListaEventosPage> {
                   ),
                   title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(DateFormat('dd/MM/yyyy').format(date)),
-                  trailing: Row(
+                  trailing: _userRole == 'admin' ? Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
@@ -111,18 +261,18 @@ class _ListaEventosPageState extends State<ListaEventosPage> {
                         onPressed: () => _eliminarEvento(evento),
                       ),
                     ],
-                  ),
+                  ) : null,
                 ),
               );
             },
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _userRole == 'admin' ? FloatingActionButton(
         onPressed: _agregarEvento,
         backgroundColor: Colors.blue[800],
         child: const Icon(Icons.add, color: Colors.white),
-      ),
+      ) : null,
     );
   }
 }

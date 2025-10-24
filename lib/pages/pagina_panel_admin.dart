@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:gestionsocios/pages/lista_eventos_page.dart';
 import 'package:gestionsocios/pages/lista_socios_page.dart';
 import 'package:gestionsocios/services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Added
+import 'package:gestionsocios/widgets/profile_info_dialog.dart'; // Added
 
 class PaginaPanelAdmin extends StatelessWidget {
   const PaginaPanelAdmin({super.key});
@@ -12,6 +14,26 @@ class PaginaPanelAdmin extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Panel de Administrador', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue[800],
+        leading: IconButton(
+          icon: const Icon(Icons.person, color: Colors.white),
+          onPressed: () async {
+            final user = FirebaseAuth.instance.currentUser;
+            if (user != null) {
+              final role = await AuthService().getUserRole(user.uid);
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return ProfileInfoDialog(
+                      email: user.email ?? 'No disponible',
+                      role: role ?? 'No disponible',
+                    );
+                  },
+                );
+              }
+            }
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),

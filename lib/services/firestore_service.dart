@@ -14,6 +14,29 @@ class FirestoreService {
     return _firestore.collection('events').snapshots();
   }
 
-  // Aquí podríamos añadir más métodos en el futuro, como:
-  // Future<void> updateUser(String uid, Map<String, dynamic> data) { ... }
+  // Métodos para Socios
+  Future<void> addSocio(String uid, Map<String, dynamic> socioData) async {
+    return _firestore.collection('users').doc(uid).set(socioData);
+  }
+
+  Future<void> updateSocio(String uid, Map<String, dynamic> socioData) async {
+    return _firestore.collection('users').doc(uid).update(socioData);
+  }
+
+  Future<void> deleteSocio(String uid) async {
+    return _firestore.collection('users').doc(uid).delete();
+  }
+
+  // Métodos para Eventos
+  Future<Future<DocumentReference<Map<String, dynamic>>>> addEvento(Map<String, dynamic> eventData) async {
+    return _firestore.collection('events').add(eventData);
+  }
+
+  Future<void> updateEvento(String eventId, Map<String, dynamic> eventData) async {
+    return _firestore.collection('events').doc(eventId).update(eventData);
+  }
+
+  Future<void> deleteEvento(String eventId) async {
+    return _firestore.collection('events').doc(eventId).delete();
+  }
 }
